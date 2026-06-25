@@ -1,152 +1,117 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>全民運動科公文小助手</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全民運動科公文小助手</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="app-shell">
+    <div class="decor decor-star star-1">✦</div>
+    <div class="decor decor-star star-2">✧</div>
+    <div class="decor decor-heart heart-1">♡</div>
+    <div class="decor decor-bubble bubble-1"></div>
+    <div class="decor decor-bubble bubble-2"></div>
+    <div class="decor decor-bubble bubble-3"></div>
 
-<!-- 裝飾 -->
-<div class="deco-cloud cloud-1" aria-hidden="true"></div>
-<div class="deco-cloud cloud-2" aria-hidden="true"></div>
-<div class="deco-cloud cloud-3" aria-hidden="true"></div>
-<div class="deco-star star-1" aria-hidden="true">✦</div>
-<div class="deco-star star-2" aria-hidden="true">✧</div>
-<div class="deco-star star-3" aria-hidden="true">✦</div>
-<div class="deco-star star-4" aria-hidden="true">✧</div>
+    <header class="hero">
+      <div class="cloud cloud-left"></div>
+      <div class="cloud cloud-right"></div>
+      <div class="hero-panel">
+        <section class="hero-text">
+          <span class="eyebrow">☁️ Kaohsiung Document Helper</span>
+          <h1>全民運動科<br />公文小助手</h1>
+          <p>先給你「小助手整理步驟」，再保留「手冊原文依據」可以查核。依身分查詢，不跨手冊混用。</p>
+          <div class="hero-pills">
+            <a href="#searchPanel" class="start-pill">開始查詢</a>
+            <span class="info-pill">PDF 原文保留</span>
+            <span class="info-pill">12 份手冊</span>
+          </div>
+        </section>
 
-<header class="site-header">
-  <div class="header-inner">
-    <div class="header-mascot" aria-hidden="true">
-      <img src="mascot.png" alt="公文小助手吉祥物" class="mascot-img">
-    </div>
-    <div class="header-text">
-      <h1 class="header-title">全民運動科公文小助手</h1>
-      <p class="header-subtitle">快速查詢各身分對應操作手冊原文，協助找到清楚明瞭的公文處理指引。</p>
-    </div>
-  </div>
-</header>
+        <section class="mascot-stage" aria-label="雲朵長耳小助手裝飾">
+          <div class="moon"></div>
+          <div class="tiny-card card-a">簽收</div>
+          <div class="tiny-card card-b">核判</div>
+          <div class="tiny-card card-c">歸檔</div>
+          <div class="cloud-dog">
+            <div class="dog-ear dog-ear-left"></div>
+            <div class="dog-ear dog-ear-right"></div>
+            <div class="dog-face">
+              <div class="dog-eye dog-eye-left"></div>
+              <div class="dog-eye dog-eye-right"></div>
+              <div class="dog-cheek dog-cheek-left"></div>
+              <div class="dog-cheek dog-cheek-right"></div>
+              <div class="dog-nose"></div>
+              <div class="dog-mouth"></div>
+            </div>
+            <div class="dog-curl-tail"></div>
+            <div class="dog-beret">✦</div>
+          </div>
+          <div class="cloud-base"></div>
+        </section>
+      </div>
+    </header>
 
-<main class="main-content">
-
-  <!-- 歡迎說明 -->
-  <section class="welcome-card">
-    <div class="welcome-icon" aria-hidden="true">🌸</div>
-    <div class="welcome-text">
-      <p class="welcome-title">歡迎使用全民運動科公文小助手！</p>
-      <p class="welcome-desc">請先選擇您的身分，再輸入想查詢的關鍵字，系統會從對應手冊中找出原文內容，提供您最直接的操作指引。</p>
-    </div>
-  </section>
-
-  <!-- 載入提示（資料未就緒時顯示） -->
-  <div id="dataLoadingBar" class="data-loading-bar" style="display:none">
-    <div class="data-loading-inner">
-      <div class="loading-spinner-sm"></div>
-      <span id="dataLoadingText">正在載入手冊資料，請稍候…</span>
-    </div>
-  </div>
-  <div id="dataErrorBar" class="data-error-bar" style="display:none">
-    ⚠ 無法載入手冊資料（search-data.json），請確認檔案存在後重新整理頁面。
-  </div>
-
-  <!-- 查詢面板 -->
-  <section class="search-panel">
-    <div class="panel-header">
-      <span class="panel-icon" aria-hidden="true">🔍</span>
-      <h2 class="panel-title">查詢操作指引</h2>
-      <div class="panel-ribbon" aria-hidden="true"></div>
-    </div>
-
-    <form id="searchForm" class="search-form" autocomplete="off">
-
-      <div class="form-row">
-        <label class="form-label" for="roleSelect">
-          <span class="label-icon" aria-hidden="true">👤</span>
-          <span class="label-text">使用者身分</span>
-          <span class="label-required" aria-hidden="true">必填</span>
-        </label>
-        <div class="select-wrapper">
-          <select id="roleSelect" name="role" class="form-select" required>
-            <option value="">── 請選擇您的身分 ──</option>
-            <option value="承辦人">承辦人</option>
-            <option value="基層主管">基層主管</option>
-            <option value="核判長官">核判長官</option>
-            <option value="登記桌人員">登記桌人員</option>
-            <option value="機關收文人員">機關收文人員</option>
-            <option value="機關發文人員">機關發文人員</option>
-            <option value="研考人員">研考人員</option>
-            <option value="機關系統管理者">機關系統管理者</option>
-            <option value="電子交換人員">電子交換人員</option>
-            <option value="影像掃描人員">影像掃描人員</option>
-            <option value="檔案管理人員（學校）">檔案管理人員（學校）</option>
-            <option value="檔案管理人員（機關）">檔案管理人員（機關）</option>
-          </select>
-          <span class="select-arrow" aria-hidden="true">▾</span>
+    <main class="container">
+      <section class="notice-card">
+        <div class="notice-icon">🪽</div>
+        <div>
+          <h2>使用方式</h2>
+          <p>請先選擇身分，再輸入關鍵字。結果會優先顯示「精選操作指引」，也會搜尋完整 PDF 抽取原文頁面。</p>
         </div>
-        <div id="roleStatus" class="role-status" role="status" aria-live="polite"></div>
-      </div>
+      </section>
 
-      <div class="form-row">
-        <label class="form-label" for="queryInput">
-          <span class="label-icon" aria-hidden="true">✏️</span>
-          <span class="label-text">查詢關鍵字</span>
-          <span class="label-required" aria-hidden="true">必填</span>
-          <span class="label-hint">可用空白隔開多個關鍵字</span>
-        </label>
-        <div class="input-group">
-          <input
-            type="text"
-            id="queryInput"
-            name="query"
-            class="form-input"
-            placeholder="例如：發文、簽核流程、附件上傳…"
-            maxlength="100"
-          >
-          <button type="submit" class="btn-search" id="searchBtn">
-            🔍 查詢指引
-          </button>
-          <button type="button" class="btn-clear" onclick="clearAll()">
-            ✕ 清除內容
-          </button>
+      <section id="searchPanel" class="search-panel">
+        <div class="panel-title">
+          <span class="title-icon">☁</span>
+          <div>
+            <h2>查詢公文操作</h2>
+            <p>輸入情境、功能名稱、按鈕名稱都可以。</p>
+          </div>
         </div>
-      </div>
 
-    </form>
-  </section>
+        <div class="form-grid">
+          <label class="field">
+            <span>選擇身分</span>
+            <select id="roleSelect">
+              <option value="">請選擇身分</option>
+            </select>
+          </label>
 
-  <!-- 查詢結果 -->
-  <section class="results-section" id="resultsSection" style="display:none" aria-live="polite">
-    <div class="results-header">
-      <span class="results-icon" aria-hidden="true">📋</span>
-      <span class="results-label">查詢結果</span>
-      <span id="resultsBadge" class="results-badge"></span>
-      <span id="resultsInfo" class="results-info"></span>
-    </div>
-    <div id="resultsList" class="results-list"></div>
-  </section>
+          <label class="field">
+            <span>查詢關鍵字</span>
+            <input id="queryInput" type="text" placeholder="例：紙本來文存查、補簽、設定代理、點收作業" autocomplete="off" />
+          </label>
+        </div>
 
-  <!-- 無結果 -->
-  <section class="no-result-section" id="noResultSection" style="display:none" aria-live="polite">
-    <div class="no-result-box">
-      <div class="no-result-deco" aria-hidden="true">
-        <span class="no-result-cloud">☁️</span>
-        <span class="no-result-stars">✦ ✧ ✦</span>
-      </div>
-      <p class="no-result-text">查無對應原文指引，請改用其他關鍵字查詢。</p>
-      <p class="no-result-hint">試試看不同的詞彙，例如功能名稱或操作步驟關鍵詞 ☁️</p>
-    </div>
-  </section>
+        <div class="button-row">
+          <button id="searchBtn" class="btn btn-primary">查詢指引</button>
+          <button id="clearBtn" class="btn btn-secondary">清除內容</button>
+        </div>
 
-</main>
+        <div class="quick-searches" id="quickSearches"></div>
+      </section>
 
-<footer class="site-footer">
-  <div class="footer-deco" aria-hidden="true">✦ ☁ ✧ ☁ ✦</div>
-  <p>全民運動科公文小助手｜提供各身分操作手冊原文查詢</p>
-</footer>
+      <section class="status-panel">
+        <div id="dataStatus">資料載入中……</div>
+      </section>
 
-<script src="app.js"></script>
+      <section class="results-panel">
+        <div class="results-heading">
+          <div>
+            <h2>查詢結果</h2>
+            <p>先看整理步驟，需要查核再展開原文。</p>
+          </div>
+          <div id="resultCount" class="result-count"></div>
+        </div>
+        <div id="results" class="results-list"></div>
+      </section>
+    </main>
+
+    <footer class="footer">全民運動科公文小助手｜小助手整理步驟 + 手冊原文依據</footer>
+  </div>
+  <script src="app.js"></script>
 </body>
 </html>
-
