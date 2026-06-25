@@ -1,1 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全民運動科公文小助手</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-bg">
+    <header class="hero">
+      <div class="cloud cloud-1"></div>
+      <div class="cloud cloud-2"></div>
+      <div class="cloud cloud-3"></div>
 
+      <div class="hero-card">
+        <div class="badge">☁️ 公文原文查詢</div>
+        <h1>全民運動科公文小助手</h1>
+        <p>
+          快速查詢各身分對應操作手冊原文，協助找到清楚明瞭的公文處理指引。
+        </p>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="welcome-card">
+        <h2>歡迎使用全民運動科公文小助手！</h2>
+        <p>
+          請先選擇您的身分，再輸入想查詢的關鍵字，系統會從對應手冊中找出原文內容，提供您最直接的操作指引。
+        </p>
+      </section>
+
+      <section class="search-card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="roleSelect">選擇身分</label>
+            <select id="roleSelect">
+              <option value="">請選擇身分</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="queryInput">查詢關鍵字</label>
+            <input
+              id="queryInput"
+              type="text"
+              placeholder="例如：紙本來文存查、待核判、點收作業"
+            />
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="searchBtn" class="primary-btn">查詢指引</button>
+          <button id="clearBtn" class="secondary-btn">清除內容</button>
+        </div>
+
+        <div class="tips">
+          <span>小提醒：</span>
+          查詢結果只會顯示所選身分對應手冊的原文，不會改寫內容。
+        </div>
+      </section>
+
+      <section class="status-card">
+        <div id="dataStatus">資料載入中……</div>
+      </section>
+
+      <section class="results-section">
+        <div class="results-header">
+          <h2>查詢結果</h2>
+          <div id="resultCount" class="result-count"></div>
+        </div>
+
+        <div id="results"></div>
+      </section>
+    </main>
+
+    <footer>
+      全民運動科公文小助手｜提供各身分操作手冊原文查詢
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
