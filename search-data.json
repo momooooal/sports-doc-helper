@@ -1,1 +1,37 @@
-
+[
+  {
+    "role": "承辦人",
+    "manual_name": "高雄第三代公文系統_承辦人操作手冊.pdf",
+    "section_title": "紙本來文存查",
+    "page_number": 106,
+    "exact_text": "這裡是測試資料：承辦人紙本來文存查的手冊原文。之後請替換成 PDF 抽出的真正原文。"
+  },
+  {
+    "role": "登記桌人員",
+    "manual_name": "高雄第三代公文系統_登記桌操作手冊.pdf",
+    "section_title": "來文分文",
+    "page_number": 40,
+    "exact_text": "這裡是測試資料：登記桌人員來文分文的手冊原文。之後請替換成 PDF 抽出的真正原文。"
+  },
+  {
+    "role": "機關收文人員",
+    "manual_name": "高雄第三代公文系統_機關收文操作手冊.pdf",
+    "section_title": "紙本收文登錄",
+    "page_number": 10,
+    "exact_text": "這裡是測試資料：機關收文人員紙本收文登錄的手冊原文。之後請替換成 PDF 抽出的真正原文。"
+  },
+  {
+    "role": "核判長官",
+    "manual_name": "高雄第三代公文系統_核判長官操作手冊.pdf",
+    "section_title": "待核判",
+    "page_number": 6,
+    "exact_text": "這裡是測試資料：核判長官待核判的手冊原文。之後請替換成 PDF 抽出的真正原文。"
+  },
+  {
+    "role": "檔案管理人員（機關）",
+    "manual_name": "高雄第三代公文系統_檔案管理操作手冊(機關).pdf",
+    "section_title": "點收作業",
+    "page_number": 5,
+    "exact_text": "這裡是測試資料：檔案管理人員點收作業的手冊原文。之後請替換成 PDF 抽出的真正原文。"
+  }
+]
