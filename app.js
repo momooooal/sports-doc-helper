@@ -147,6 +147,84 @@ function scoreRecord(record, keywords, fullQuery) {
   return score;
 }
 
+function isCuratedRecord(record) {
+  const typeText = `${record.data_type || ''} ${record.record_type || ''}`;
+  return typeText.includes('curated') || typeText.includes('小助手') || typeText.includes('精選');
+}
+
+function querySpecificity(fullQuery, keywords) {
+  const q = (fullQuery || '').trim();
+  if (!q) return 'none';
+  // 很廣的詞容易命中很多操作，最多顯示 2 筆；其他情況只顯示最符合的 1 筆。
+  const broadTerms = ['發文', '查詢', '申請', '存查', '歸檔', '簽收', '送出', '列印', '設定', '公文', '附件'];
+  if (broadTerms.includes(q)) return 'broad';
+  if (q.length <= 1) return 'broad';
+  return 'specific';
+}
+
+function curatedMatchLevel(record, keywords, fullQuery) {
+  const title = record.title || '';
+  const keywordText = joinArray(record.keywords);
+  const stepsText = joinArray(record.assistant_steps);
+  const section = record.section_title || '';
+  const q = fullQuery || '';
+
+  if (!q) return 0;
+  if (title === q) return 1000;
+  if (title.includes(q) || q.includes(title)) return 900;
+  if ((record.keywords || []).some(k => k === q)) return 850;
+  if (keywordText.includes(q)) return 750;
+  if (section.includes(q)) return 650;
+
+  let hitCount = 0;
+  for (const kw of keywords) {
+    if (title.includes(kw) || keywordText.includes(kw) || stepsText.includes(kw) || section.includes(kw)) {
+      hitCount += 1;
+    }
+  }
+  if (hitCount === keywords.length && keywords.length > 1) return 500;
+  if (hitCount > 0) return 250;
+  return 0;
+}
+
+function pickBestResults(scored, role, fullQuery, keywords = []) {
+  const curatedScored = scored
+    .filter(s => isCuratedRecord(s.record))
+    .map(s => ({
+      ...s,
+      matchLevel: curatedMatchLevel(s.record, keywords, fullQuery)
+    }))
+    .filter(s => s.matchLevel > 0)
+    .sort((a, b) => {
+      if (b.matchLevel !== a.matchLevel) return b.matchLevel - a.matchLevel;
+      if (b.score !== a.score) return b.score - a.score;
+      return Number(a.record.page_number || 0) - Number(b.record.page_number || 0);
+    });
+
+  const pageScored = scored.filter(s => !isCuratedRecord(s.record));
+
+  // 有小助手整理資料時，只顯示最精準的整理結果，不再讓 PDF 原文頁面洗版。
+  if (curatedScored.length > 0) {
+    const specificity = querySpecificity(fullQuery, keywords);
+    const limit = specificity === 'broad' ? 2 : 1;
+
+    return {
+      results: curatedScored.slice(0, limit).map(s => s.record),
+      mode: 'curated',
+      total: curatedScored.length,
+      hidden: Math.max(curatedScored.length - limit, 0)
+    };
+  }
+
+  // 找不到小助手整理時，才顯示最相關的 1 筆原文頁面作為備援。
+  return {
+    results: pageScored.slice(0, 1).map(s => s.record),
+    mode: 'fallback',
+    total: pageScored.length,
+    hidden: Math.max(pageScored.length - 1, 0)
+  };
+}
+
 function doSearch() {
   const role  = document.getElementById('roleSelect').value.trim();
   const query = document.getElementById('queryInput').value.trim();
@@ -163,17 +241,17 @@ function doSearch() {
 
   const scored = roleData
     .map(r => ({ record: r, score: scoreRecord(r, keywords, fullQuery) }))
-    .filter(s => s.score > 0);
+    .filter(s => s.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return Number(a.record.page_number || 0) - Number(b.record.page_number || 0);
+    });
 
-  scored.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    return Number(a.record.page_number || 0) - Number(b.record.page_number || 0);
-  });
-
-  renderResults(scored.map(s => s.record), role, query, keywords);
+  const picked = pickBestResults(scored, role, fullQuery, keywords);
+  renderResults(picked.results, role, query, keywords, picked.mode, picked.total, picked.hidden);
 }
 
-function renderResults(results, role, query, keywords) {
+function renderResults(results, role, query, keywords, mode = 'curated', total = 0, hidden = 0) {
   if (!results || results.length === 0) {
     document.getElementById('noResultSection').style.display = '';
     return;
@@ -181,13 +259,15 @@ function renderResults(results, role, query, keywords) {
 
   const section = document.getElementById('resultsSection');
   section.style.display = '';
-  document.getElementById('resultsBadge').textContent = `共 ${results.length} 筆`;
-  document.getElementById('resultsInfo').textContent  = `身分：${escHtml(role)}　關鍵字：${escHtml(query)}`;
+  document.getElementById('resultsBadge').textContent = `顯示 ${results.length} 筆`;
+  document.getElementById('resultsInfo').textContent  = mode === 'curated'
+    ? `身分：${escHtml(role)}　關鍵字：${escHtml(query)}　｜已只顯示最符合的小助手指引${hidden > 0 ? `，另有 ${hidden} 筆相關結果已隱藏，請用更完整關鍵字縮小範圍。` : '。'}`
+    : `身分：${escHtml(role)}　關鍵字：${escHtml(query)}　｜未找到小助手整理，僅顯示最相關的原文頁面參考。`;
 
   const list = document.getElementById('resultsList');
   list.innerHTML = '';
 
-  results.slice(0, 50).forEach((r, idx) => {
+  results.forEach((r, idx) => {
     const card = document.createElement('div');
     card.className = 'result-card';
 
@@ -221,12 +301,15 @@ function renderResults(results, role, query, keywords) {
         ${renderNotes(notes)}
       </div>
 
-      <div class="result-content-box">
-        <div class="result-content-label">📖 手冊原文依據（關鍵字附近段落）</div>
-        <div class="result-content-text" id="${snippetId}">${snippetHtml}${hasMore ? '<span class="ellipsis-hint">…</span>' : ''}</div>
-        <div class="result-content-text full-text" id="${fullId}" style="display:none">${fullHtml}</div>
-        ${hasMore ? `<button class="btn-expand" id="${expandId}" onclick="toggleFull('${snippetId}','${fullId}','${expandId}')">▼ 展開完整原文</button>` : ''}
-      </div>
+      <details class="evidence-details">
+        <summary>📖 查看手冊原文依據</summary>
+        <div class="result-content-box">
+          <div class="result-content-label">手冊原文依據（關鍵字附近段落）</div>
+          <div class="result-content-text" id="${snippetId}">${snippetHtml}${hasMore ? '<span class="ellipsis-hint">…</span>' : ''}</div>
+          <div class="result-content-text full-text" id="${fullId}" style="display:none">${fullHtml}</div>
+          ${hasMore ? `<button class="btn-expand" id="${expandId}" onclick="toggleFull('${snippetId}','${fullId}','${expandId}')">▼ 展開完整原文</button>` : ''}
+        </div>
+      </details>
     `;
     list.appendChild(card);
   });
@@ -240,7 +323,7 @@ function normalizeSteps(value) {
 
 function renderSteps(steps, keywords) {
   if (!steps.length) {
-    return `<p class="assistant-empty">此筆資料沒有額外整理步驟，請以下方手冊原文依據為準。</p>`;
+    return `<p class="assistant-empty">此筆尚無小助手整理步驟，請展開手冊原文依據確認。</p>`;
   }
   return `
     <ol class="assistant-step-list">

@@ -370,3 +370,110 @@ mark { background:rgba(255,220,100,.55); color:inherit; padding:0 2px; border-ra
   color: var(--blue-mid);
   font-weight: 900;
 }
+
+
+/* ---- 小助手整理步驟與原文依據：不改主視覺，只優化結果閱讀 ---- */
+.assistant-steps-box {
+  background: linear-gradient(135deg, #ffffff 0%, var(--blue-ghost) 100%);
+  border: 1.5px solid var(--blue-light);
+  border-left: 5px solid var(--blue-deep);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+}
+.assistant-steps-label {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--blue-deep);
+  margin-bottom: 8px;
+  letter-spacing: .5px;
+}
+.assistant-steps-alert {
+  font-size: 12px;
+  color: var(--gray-500);
+  background: rgba(255,255,255,.8);
+  border: 1px dashed var(--blue-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+.assistant-step-list {
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.assistant-step-list li {
+  line-height: 1.75;
+  font-size: 14px;
+  color: var(--text-main);
+}
+.assistant-notes {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--cream-warm);
+  border: 1px solid #f0d080;
+}
+.assistant-notes-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: #8a5800;
+  margin-bottom: 5px;
+}
+.assistant-notes ul {
+  padding-left: 18px;
+  line-height: 1.65;
+  font-size: 12px;
+  color: var(--gray-700);
+}
+.assistant-empty {
+  color: var(--gray-500);
+  line-height: 1.7;
+  font-size: 13px;
+}
+.evidence-details {
+  margin-top: 8px;
+}
+.evidence-details > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: var(--white);
+  border: 1.5px solid var(--blue-light);
+  color: var(--blue-deep);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+  transition: .18s;
+}
+.evidence-details > summary::-webkit-details-marker { display: none; }
+.evidence-details > summary:hover {
+  background: var(--blue-ghost);
+  transform: translateY(-1px);
+}
+.evidence-details[open] > summary {
+  margin-bottom: 10px;
+}
+.btn-expand {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 13px;
+  border-radius: 18px;
+  border: 1.5px solid var(--blue-light);
+  background: var(--white);
+  color: var(--blue-deep);
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ellipsis-hint { color: var(--blue-mid); font-weight: 900; }
