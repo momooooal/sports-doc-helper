@@ -30,6 +30,8 @@ let quickGuideCollapsed = false;
 const ROLE_CATEGORY_ORDER = {
   '承辦人': ['常用待辦', '案例流程', '表單申請', '個人設定', '常見問題', '其他查詢'],
   '登記桌人員': ['常用待辦', '代理模式', '案例流程', '查詢報表', '個人設定', '常見問題'],
+  '基層主管': ['常用待辦', '核閱決行', '案例流程', '表單申請', '查詢報表', '個人設定', '常見問題'],
+  '核判長官': ['常用待辦', '核判決行', '受會會辦', '案例流程', '查詢報表', '個人設定', '常見問題'],
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -124,6 +126,8 @@ function getCategoryOrder(role) {
 
 function getRecordCategory(record) {
   if (record.role === '登記桌人員') return getDeskCategory(record);
+  if (record.role === '基層主管') return getSupervisorCategory(record);
+  if (record.role === '核判長官') return getJudgeCategory(record);
   return getChengbanCategory(record);
 }
 
@@ -139,6 +143,48 @@ function getChengbanCategory(record) {
   return '常用待辦';
 }
 
+
+
+function getSupervisorCategory(record) {
+  const title = record.title || '';
+  const words = `${title} ${joinArray(record.keywords)} ${record.section_title || ''}`;
+
+  if (/^(待簽收|承辦中|受會案件|待結案|待歸檔|待複閱|待補簽章)/.test(title)) return '常用待辦';
+  if (/^(陳核案件|表單核閱)/.test(title)) return '核閱決行';
+  if (/^案例流程/.test(title)) return '案例流程';
+  if (/^(表單申請|公文展期|公文專案|公文速別|公文銷號|公文延後歸檔|檔案目錄|調案查詢|特殊性案件)/.test(title)) return '表單申請';
+  if (/^(已處理公文|承辦作業|查詢|報表列印|應用作業)/.test(title)) return '查詢報表';
+  if (/^(共通性作業|個人化儀表板|自訂流程|個人資料|設定代理|被代理|個人憑證)/.test(title)) return '個人設定';
+  if (/^(常見問題)/.test(title)) return '常見問題';
+
+  if (/(補簽|待簽收|承辦中|受會|待結案|待歸檔|複閱)/.test(words)) return '常用待辦';
+  if (/(陳核|決行|核閱|審核|退件|流程變更)/.test(words)) return '核閱決行';
+  if (/(案例流程|線上公文|紙本公文|核判變更流程)/.test(words)) return '案例流程';
+  if (/(展期|專案|速別|性質|銷號|延後歸檔|調閱|調案|特殊性案件|表單申請)/.test(words)) return '表單申請';
+  if (/(查詢|報表|列印|清單|登記簿|應用|抽樣分析|發文群組|會辦案件)/.test(words)) return '查詢報表';
+  if (/(儀表板|自訂流程|個人資料|代理|憑證)/.test(words)) return '個人設定';
+  return '常用待辦';
+}
+
+function getJudgeCategory(record) {
+  const title = record.title || '';
+  const words = `${title} ${joinArray(record.keywords)} ${record.section_title || ''}`;
+
+  if (/^(待簽收|待複閱|表單核閱|待補簽章)/.test(title)) return '常用待辦';
+  if (/^(待核判)/.test(title)) return '核判決行';
+  if (/^(受會待核判)/.test(title)) return '受會會辦';
+  if (/^案例流程/.test(title)) return '案例流程';
+  if (/^(已處理公文|查詢|報表列印|核判長官作業)/.test(title)) return '查詢報表';
+  if (/^(共通性作業|個人化儀表板|個人資料|設定代理|被代理|個人憑證)/.test(title)) return '個人設定';
+  if (/^(常見問題|補簽作業)/.test(title)) return '常見問題';
+
+  if (/(受會|會畢|會辦)/.test(words)) return '受會會辦';
+  if (/(核判|決行|送陳|退回|退文|流程變更)/.test(words)) return '核判決行';
+  if (/(案例流程|電子來文|紙本來文|複閱|變更流程)/.test(words)) return '案例流程';
+  if (/(查詢|清單|收文簿|列印|未結案|已結案|會畢公文)/.test(words)) return '查詢報表';
+  if (/(儀表板|個人資料|代理|憑證)/.test(words)) return '個人設定';
+  return '常用待辦';
+}
 
 function getDeskCategory(record) {
   const title = record.title || '';
@@ -424,7 +470,7 @@ function querySpecificity(fullQuery, keywords) {
   const q = (fullQuery || '').trim();
   if (!q) return 'none';
   // 很廣的詞容易命中很多操作，最多顯示 2 筆；其他情況只顯示最符合的 1 筆。
-  const broadTerms = ['發文', '查詢', '申請', '存查', '歸檔', '簽收', '分文', '代理', '代理模式', '送出', '列印', '設定', '公文', '附件', '報表'];
+  const broadTerms = ['發文', '查詢', '申請', '存查', '歸檔', '簽收', '分文', '代理', '代理模式', '送出', '列印', '設定', '公文', '附件', '報表', '核判', '批核', '決行', '複閱', '表單', '會辦', '送陳會', '送陳/會', '退文', '抽回'];
   if (broadTerms.includes(q)) return 'broad';
   if (q.length <= 1) return 'broad';
   return 'specific';
