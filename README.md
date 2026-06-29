@@ -1,8 +1,13 @@
 # 全民運動科公文小助手
 
-此版本保留原本 Replit 版面與吉祥物，只在查詢結果新增：
+此版本保留原本 Replit 藍白療癒系版面，並新增「小助手整理步驟 + 手冊原文依據」。
 
-- 小助手整理步驟（依手冊原文自動擷取）
-- 手冊原文依據（可展開完整原文）
+請將以下檔案放在 GitHub Pages repository 根目錄：
 
-部署到 GitHub Pages 時，請將本資料夾內所有檔案放在 repository 根目錄。
+- `index.html`
+- `style.css`
+- `app.js`
+- `search-data.json`
+- `mascot.png`
+
+更新後等待 GitHub Pages 部署完成，再重新整理網站。

@@ -277,14 +277,85 @@ mark { background:rgba(255,220,100,.55); color:inherit; padding:0 2px; border-ra
 /* ---- 動畫 ---- */
 @keyframes spin { to { transform:rotate(360deg); } }
 
-/* ---- 展開完整原文按鈕（保留原本藍白療癒風格） ---- */
+
+/* ---- 小助手整理步驟（新增，不更動原本版面主風格） ---- */
+.assistant-steps-box {
+  background: linear-gradient(135deg, #ffffff 0%, #f4fbff 55%, #fffdf7 100%);
+  border: 1.5px solid var(--blue-light);
+  border-left: 5px solid var(--accent-pink);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+}
+.assistant-steps-label {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--blue-deep);
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.assistant-steps-alert {
+  font-size: 12px;
+  color: var(--gray-500);
+  background: rgba(222,239,254,.75);
+  border: 1px dashed var(--blue-light);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+.assistant-step-list {
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.assistant-step-list li {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-main);
+  padding-left: 4px;
+}
+.assistant-step-list li::marker {
+  color: var(--blue-deep);
+  font-weight: 900;
+}
+.assistant-empty {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--gray-500);
+}
+.assistant-notes {
+  margin-top: 12px;
+  background: var(--cream-warm);
+  border: 1px solid #f2dfb3;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.assistant-notes-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--warning);
+  margin-bottom: 5px;
+}
+.assistant-notes ul {
+  padding-left: 18px;
+}
+.assistant-notes li {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--gray-700);
+}
 .btn-expand {
   margin-top: 10px;
-  padding: 7px 14px;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1.5px solid var(--blue-light);
   background: var(--white);
   color: var(--blue-deep);
+  border-radius: 999px;
+  padding: 7px 14px;
   font-family: var(--font);
   font-size: 12px;
   font-weight: 800;
@@ -292,7 +363,7 @@ mark { background:rgba(255,220,100,.55); color:inherit; padding:0 2px; border-ra
   transition: .18s;
 }
 .btn-expand:hover {
-  background: var(--blue-ghost);
+  background: var(--blue-pale);
   transform: translateY(-1px);
 }
 .ellipsis-hint {
