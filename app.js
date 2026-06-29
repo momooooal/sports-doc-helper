@@ -94,7 +94,16 @@ function parseKeywords(query) {
 
 /* ---- 搜尋計分（越多關鍵字命中、命中越多次，分數越高） ---- */
 function scoreRecord(record, keywords) {
-  const text = record.exact_text + ' ' + record.section_title;
+  const textParts = [
+    record.title,
+    Array.isArray(record.keywords) ? record.keywords.join(' ') : '',
+    Array.isArray(record.assistant_steps) ? record.assistant_steps.join(' ') : '',
+    Array.isArray(record.notes) ? record.notes.join(' ') : '',
+    record.exact_text,
+    record.section_title,
+    record.manual_name
+  ];
+  const text = textParts.filter(Boolean).join(' ');
   let score  = 0;
   let allHit = true;
 
@@ -107,8 +116,130 @@ function scoreRecord(record, keywords) {
   // 所有關鍵字都命中加權
   if (allHit && keywords.length > 1) score += keywords.length * 5;
 
+  // 命中章節標題、主題名稱時再加權，讓更像操作指引的頁面排前面
+  const titleText = [record.title, record.section_title].filter(Boolean).join(' ');
+  for (const kw of keywords) {
+    if (titleText.includes(kw)) score += 8;
+  }
+
   return score;
 }
+
+/* ---- 小助手整理步驟：優先讀取資料欄位，沒有就從 exact_text 依原文擷取 ---- */
+function buildAssistantSteps(record) {
+  if (Array.isArray(record.assistant_steps) && record.assistant_steps.length > 0) {
+    return record.assistant_steps
+      .map((step, index) => `${index + 1}. ${step}`)
+      .join('\n');
+  }
+
+  const extracted = extractStepsFromText(record.exact_text || '');
+
+  if (extracted.length === 0) {
+    return '此頁未擷取到明確步驟，請展開下方手冊原文確認。';
+  }
+
+  return extracted
+    .slice(0, 8)
+    .map((step, index) => `${index + 1}. ${step}`)
+    .join('\n');
+}
+
+/* ---- 從手冊原文擷取步驟，不新增手冊沒有的操作內容 ---- */
+function extractStepsFromText(text) {
+  const lines = cleanManualLines(text);
+  const steps = [];
+
+  // 1. 擷取「步驟一：……」格式，並串接後面的 A/B/C 說明
+  let current = null;
+
+  for (const line of lines) {
+    const stepMatch = line.match(/^(?:[（(]\d+[）)]\s*)?步驟[一二三四五六七八九十\d]+[：:]\s*(.+)$/);
+    if (stepMatch) {
+      if (current) steps.push(current);
+      current = stepMatch[1].trim();
+      continue;
+    }
+
+    const alphaMatch = line.match(/^[A-Z]\.\s*(.+)$/);
+    if (current && alphaMatch) {
+      const detail = alphaMatch[1].trim();
+      if (detail) current += ` → ${detail}`;
+      continue;
+    }
+
+    // 手冊有些 A/B/C 的下一行會換行，補接短行
+    if (current && !looksLikeNewSection(line) && line.length <= 36) {
+      const lastPart = current.split(' → ').pop() || '';
+      if (lastPart && !lastPart.endsWith('。') && !lastPart.endsWith('】') && !lastPart.endsWith('即可')) {
+        current += line;
+      }
+    }
+  }
+
+  if (current) steps.push(current);
+
+  if (steps.length > 0) return uniqueSteps(steps);
+
+  // 2. 擷取「(1) 【按鈕】：說明」格式
+  for (const line of lines) {
+    const actionMatch = line.match(/^[（(]\d+[）)]\s*【([^】]+)】[：:]\s*(.+)$/);
+    if (actionMatch) {
+      steps.push(`使用【${actionMatch[1]}】：${actionMatch[2]}`);
+    }
+  }
+
+  if (steps.length > 0) return uniqueSteps(steps);
+
+  // 3. 擷取「步驟說明：A→B→C」格式
+  const flowLine = lines.find(line => line.includes('步驟說明') && line.includes('→'));
+  if (flowLine) {
+    const flow = flowLine
+      .replace(/^.*步驟說明[：:]\s*/, '')
+      .split('→')
+      .map(part => part.replace(/[（(]\d+[）)]/g, '').trim())
+      .filter(Boolean);
+
+    if (flow.length > 0) {
+      return flow.map(part => `依序完成：${part}`);
+    }
+  }
+
+  return [];
+}
+
+function cleanManualLines(text) {
+  return String(text || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .filter(line => !line.includes('版權所有'))
+    .filter(line => !line.includes('Copyright'))
+    .filter(line => !/^高雄市政府第三代公文整合系統/.test(line))
+    .filter(line => !/^康大資訊/.test(line))
+    .filter(line => !/^文件版本/.test(line));
+}
+
+function looksLikeNewSection(line) {
+  return (
+    /^[（(]\d+[）)]/.test(line) ||
+    /^步驟[一二三四五六七八九十\d]+[：:]/.test(line) ||
+    /^[一二三四五六七八九十\d]+[、.]/.test(line) ||
+    /^第[一二三四五六七八九十\d]+/.test(line)
+  );
+}
+
+function uniqueSteps(steps) {
+  const seen = new Set();
+  return steps
+    .map(step => step.replace(/\s+/g, ' ').trim())
+    .filter(step => {
+      if (!step || seen.has(step)) return false;
+      seen.add(step);
+      return true;
+    });
+}
+
 
 /* ---- 執行查詢 ---- */
 function doSearch() {
@@ -158,6 +289,9 @@ function renderResults(results, role, query, keywords) {
     const card = document.createElement('div');
     card.className = 'result-card';
 
+    const assistantText = buildAssistantSteps(r);
+    const assistantHtml = highlightKeywords(escHtml(assistantText), keywords);
+
     const snippetText = extractSnippet(r.exact_text, keywords, 300);
     const fullText    = r.exact_text;
     const snippetHtml = highlightKeywords(escHtml(snippetText), keywords);
@@ -174,8 +308,14 @@ function renderResults(results, role, query, keywords) {
         <span class="meta-tag meta-section">📌 ${escHtml(r.section_title)}</span>
         <span class="meta-tag meta-page">第 ${r.page_number} 頁</span>
       </div>
+
+      <div class="result-content-box" style="margin-bottom:12px;">
+        <div class="result-content-label">☁️ 小助手整理步驟（依手冊原文擷取）</div>
+        <div class="result-content-text">${assistantHtml}</div>
+      </div>
+
       <div class="result-content-box">
-        <div class="result-content-label">📝 操作指引原文（關鍵字附近段落）</div>
+        <div class="result-content-label">📖 手冊原文依據（關鍵字附近段落）</div>
         <div class="result-content-text" id="${snippetId}">${snippetHtml}${hasMore ? '<span class="ellipsis-hint">…</span>' : ''}</div>
         <div class="result-content-text full-text" id="${fullId}" style="display:none">${fullHtml}</div>
         ${hasMore ? `<button class="btn-expand" id="${expandId}" onclick="toggleFull('${snippetId}','${fullId}','${expandId}')">▼ 展開完整原文</button>` : ''}
@@ -184,6 +324,7 @@ function renderResults(results, role, query, keywords) {
     list.appendChild(card);
   });
 }
+
 
 /* ---- 展開/收合 ---- */
 function toggleFull(snippetId, fullId, btnId) {
