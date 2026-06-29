@@ -23,6 +23,11 @@ const ROLE_PDF_MAP = {
 
 let allData   = [];
 let dataReady = false;
+let activeSuggestionIndex = -1;
+let currentQuickCategory = '常用待辦';
+let quickGuideCollapsed = false;
+
+const CHENGBAN_CATEGORY_ORDER = ['常用待辦', '案例流程', '表單申請', '個人設定', '常見問題', '其他查詢'];
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSearchData();
@@ -35,6 +40,26 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('roleSelect').addEventListener('change', () => {
     updateRoleStatus();
     clearResults();
+    updateQuickGuidePanel();
+    hideSuggestions();
+  });
+
+  const queryInput = document.getElementById('queryInput');
+  queryInput.addEventListener('input', updateSuggestions);
+  queryInput.addEventListener('focus', updateSuggestions);
+  queryInput.addEventListener('keydown', handleSuggestionKeydown);
+
+  const quickToggle = document.getElementById('quickGuideToggle');
+  if (quickToggle) {
+    quickToggle.addEventListener('click', () => {
+      quickGuideCollapsed = !quickGuideCollapsed;
+      updateQuickGuidePanel();
+    });
+  }
+
+  document.addEventListener('click', event => {
+    const wrap = document.querySelector('.search-suggest-wrap');
+    if (wrap && !wrap.contains(event.target)) hideSuggestions();
   });
 });
 
@@ -54,6 +79,7 @@ async function loadSearchData() {
     dataReady = true;
     loadingBar.style.display = 'none';
     updateRoleStatus();
+    updateQuickGuidePanel();
   } catch (err) {
     loadingBar.style.display = 'none';
     errorBar.style.display   = '';
@@ -82,6 +108,213 @@ function updateRoleStatus() {
     statusEl.textContent = '⚠ 此身分尚無資料（search-data.json 可能未包含此身分）。';
     statusEl.style.color = 'var(--warning)';
   }
+}
+
+
+function getCuratedRecordsForRole(role) {
+  return allData.filter(r => r.role === role && isCuratedRecord(r) && Array.isArray(r.assistant_steps) && r.assistant_steps.length > 0);
+}
+
+function getChengbanCategory(record) {
+  const title = record.title || '';
+  const words = `${title} ${joinArray(record.keywords)}`;
+
+  if (/(電子來文|紙本來文|創簽稿|函覆|多稿|密件|紙本創簽稿|轉紙本)/.test(words)) return '案例流程';
+  if (/(展期|專案|速別|性質|銷號|延後歸檔|檔案目錄|調閱|調案|特殊性案件|申請)/.test(words)) return '表單申請';
+  if (/(儀表板|自訂流程|個人資料|代理|被代理|憑證)/.test(words)) return '個人設定';
+  if (/(筆硯|BIN|附件|大型附件|紙本如何處理|沒有資料|總發文|常見問題|確定送發)/.test(words)) return '常見問題';
+  if (/(查詢|報表|列印|群組|抽樣分析|檔案歸還|會辦公文)/.test(words)) return '其他查詢';
+  return '常用待辦';
+}
+
+function updateQuickGuidePanel() {
+  const panel = document.getElementById('quickGuidePanel');
+  const body = document.getElementById('quickGuideBody');
+  const toggle = document.getElementById('quickGuideToggle');
+  const role = document.getElementById('roleSelect').value;
+
+  if (!panel || !body || !toggle) return;
+
+  if (!dataReady || role !== '承辦人') {
+    panel.style.display = 'none';
+    return;
+  }
+
+  panel.style.display = '';
+  body.style.display = quickGuideCollapsed ? 'none' : '';
+  toggle.textContent = quickGuideCollapsed ? '展開選單' : '收合選單';
+
+  if (!quickGuideCollapsed) renderQuickGuide();
+}
+
+function renderQuickGuide() {
+  const categoryEl = document.getElementById('quickGuideCategories');
+  const optionEl = document.getElementById('quickGuideOptions');
+  if (!categoryEl || !optionEl) return;
+
+  const records = getCuratedRecordsForRole('承辦人');
+  const grouped = {};
+  for (const category of CHENGBAN_CATEGORY_ORDER) grouped[category] = [];
+  for (const record of records) {
+    const category = getChengbanCategory(record);
+    if (!grouped[category]) grouped[category] = [];
+    grouped[category].push(record);
+  }
+
+  if (!grouped[currentQuickCategory] || grouped[currentQuickCategory].length === 0) {
+    currentQuickCategory = CHENGBAN_CATEGORY_ORDER.find(c => grouped[c] && grouped[c].length > 0) || '常用待辦';
+  }
+
+  categoryEl.innerHTML = CHENGBAN_CATEGORY_ORDER
+    .filter(category => grouped[category] && grouped[category].length > 0)
+    .map(category => `
+      <button type="button" class="quick-category-btn ${category === currentQuickCategory ? 'active' : ''}" onclick="selectQuickCategory('${escAttr(category)}')">
+        ${category}<span>${grouped[category].length}</span>
+      </button>
+    `).join('');
+
+  optionEl.innerHTML = (grouped[currentQuickCategory] || [])
+    .map(record => renderQuickOption(record))
+    .join('');
+}
+
+function renderQuickOption(record) {
+  const keywords = Array.isArray(record.keywords) ? record.keywords.slice(0, 4) : [];
+  const firstStep = normalizeSteps(record.assistant_steps)[0] || '點選後直接查看小助手整理步驟。';
+  return `
+    <button type="button" class="quick-option-card" onclick="searchFromChoice('${escAttr(record.title || '')}')">
+      <span class="quick-option-title">${escHtml(record.title || '')}</span>
+      <span class="quick-option-desc">${escHtml(firstStep)}</span>
+      <span class="quick-option-tags">
+        ${keywords.map(k => `<i>${escHtml(k)}</i>`).join('')}
+      </span>
+    </button>
+  `;
+}
+
+function selectQuickCategory(category) {
+  currentQuickCategory = category;
+  renderQuickGuide();
+}
+
+function searchFromChoice(query) {
+  const roleSelect = document.getElementById('roleSelect');
+  const queryInput = document.getElementById('queryInput');
+  roleSelect.value = '承辦人';
+  queryInput.value = query;
+  hideSuggestions();
+  updateRoleStatus();
+  updateQuickGuidePanel();
+  doSearch();
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function suggestionScore(record, query, keywords) {
+  const title = record.title || '';
+  const keywordText = joinArray(record.keywords);
+  const stepsText = joinArray(record.assistant_steps);
+  const searchText = `${title} ${keywordText} ${stepsText}`;
+  let score = 0;
+
+  if (!query) return 0;
+  if (title === query) score += 1000;
+  if (title.includes(query)) score += 700;
+  if (keywordText.includes(query)) score += 520;
+  if (stepsText.includes(query)) score += 180;
+
+  let hit = 0;
+  for (const kw of keywords) {
+    if (!kw) continue;
+    if (title.includes(kw)) score += 120;
+    if (keywordText.includes(kw)) score += 100;
+    if (stepsText.includes(kw)) score += 35;
+    if (searchText.includes(kw)) hit += 1;
+  }
+  if (hit === keywords.length && keywords.length > 1) score += 160;
+  return score;
+}
+
+function getSuggestions(query) {
+  const role = document.getElementById('roleSelect').value;
+  if (!dataReady || !role || !query.trim()) return [];
+
+  const keywords = parseKeywords(query);
+  const fullQuery = keywords.join('');
+  return getCuratedRecordsForRole(role)
+    .map(record => ({ record, score: suggestionScore(record, fullQuery, keywords) }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || String(a.record.title || '').localeCompare(String(b.record.title || ''), 'zh-Hant'))
+    .slice(0, 8)
+    .map(item => item.record);
+}
+
+function updateSuggestions() {
+  const box = document.getElementById('suggestionBox');
+  const input = document.getElementById('queryInput');
+  const role = document.getElementById('roleSelect').value;
+  if (!box || !input) return;
+
+  if (!dataReady || !role) {
+    hideSuggestions();
+    return;
+  }
+
+  const query = input.value.trim();
+  const suggestions = getSuggestions(query);
+  activeSuggestionIndex = -1;
+
+  if (!query || suggestions.length === 0) {
+    hideSuggestions();
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="suggestion-title">你可能想查：</div>
+    ${suggestions.map((record, index) => renderSuggestionItem(record, index)).join('')}
+  `;
+  box.style.display = '';
+}
+
+function renderSuggestionItem(record, index) {
+  const keywords = Array.isArray(record.keywords) ? record.keywords.slice(0, 3) : [];
+  return `
+    <button type="button" class="suggestion-item" data-index="${index}" onclick="searchFromChoice('${escAttr(record.title || '')}')">
+      <span class="suggestion-main">${escHtml(record.title || '')}</span>
+      <span class="suggestion-sub">${keywords.map(k => escHtml(k)).join('・')}</span>
+    </button>
+  `;
+}
+
+function handleSuggestionKeydown(event) {
+  const box = document.getElementById('suggestionBox');
+  if (!box || box.style.display === 'none') return;
+  const items = [...box.querySelectorAll('.suggestion-item')];
+  if (!items.length) return;
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    activeSuggestionIndex = (activeSuggestionIndex + 1) % items.length;
+    updateSuggestionActive(items);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    activeSuggestionIndex = (activeSuggestionIndex - 1 + items.length) % items.length;
+    updateSuggestionActive(items);
+  } else if (event.key === 'Enter' && activeSuggestionIndex >= 0) {
+    event.preventDefault();
+    items[activeSuggestionIndex].click();
+  } else if (event.key === 'Escape') {
+    hideSuggestions();
+  }
+}
+
+function updateSuggestionActive(items) {
+  items.forEach((item, idx) => item.classList.toggle('active', idx === activeSuggestionIndex));
+}
+
+function hideSuggestions() {
+  const box = document.getElementById('suggestionBox');
+  if (box) box.style.display = 'none';
+  activeSuggestionIndex = -1;
 }
 
 function parseKeywords(query) {
@@ -395,6 +628,8 @@ function clearAll() {
   statusEl.textContent = '';
   statusEl.className   = 'role-status';
   statusEl.style.color = '';
+  hideSuggestions();
+  updateQuickGuidePanel();
   clearResults();
 }
 
@@ -402,6 +637,10 @@ function clearResults() {
   document.getElementById('resultsSection').style.display  = 'none';
   document.getElementById('noResultSection').style.display = 'none';
   document.getElementById('resultsList').innerHTML         = '';
+}
+
+function escAttr(str) {
+  return escHtml(str).replace(/`/g, '&#096;');
 }
 
 function escHtml(str) {

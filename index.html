@@ -96,20 +96,39 @@
           <span class="label-hint">可用空白隔開多個關鍵字</span>
         </label>
         <div class="input-group">
-          <input
-            type="text"
-            id="queryInput"
-            name="query"
-            class="form-input"
-            placeholder="例如：發文、簽核流程、附件上傳…"
-            maxlength="100"
-          >
+          <div class="search-suggest-wrap">
+            <input
+              type="text"
+              id="queryInput"
+              name="query"
+              class="form-input"
+              placeholder="例如：發文、簽核流程、附件上傳…"
+              maxlength="100"
+              aria-autocomplete="list"
+              aria-controls="suggestionBox"
+            >
+            <div id="suggestionBox" class="suggestion-box" style="display:none" role="listbox"></div>
+          </div>
           <button type="submit" class="btn-search" id="searchBtn">
             🔍 查詢指引
           </button>
           <button type="button" class="btn-clear" onclick="clearAll()">
             ✕ 清除內容
           </button>
+        </div>
+      </div>
+
+      <div id="quickGuidePanel" class="quick-guide-panel" style="display:none">
+        <div class="quick-guide-head">
+          <div>
+            <div class="quick-guide-title">☁️ 不確定要查什麼？</div>
+            <div class="quick-guide-desc">先從承辦人常用情境選起，或在上方輸入幾個字，小助手會跳出相關選項。</div>
+          </div>
+          <button type="button" class="quick-guide-toggle" id="quickGuideToggle">收合選單</button>
+        </div>
+        <div id="quickGuideBody" class="quick-guide-body">
+          <div id="quickGuideCategories" class="quick-category-list"></div>
+          <div id="quickGuideOptions" class="quick-option-list"></div>
         </div>
       </div>
 
