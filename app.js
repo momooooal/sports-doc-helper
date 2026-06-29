@@ -27,7 +27,10 @@ let activeSuggestionIndex = -1;
 let currentQuickCategory = '常用待辦';
 let quickGuideCollapsed = false;
 
-const CHENGBAN_CATEGORY_ORDER = ['常用待辦', '案例流程', '表單申請', '個人設定', '常見問題', '其他查詢'];
+const ROLE_CATEGORY_ORDER = {
+  '承辦人': ['常用待辦', '案例流程', '表單申請', '個人設定', '常見問題', '其他查詢'],
+  '登記桌人員': ['常用待辦', '代理模式', '案例流程', '查詢報表', '個人設定', '常見問題'],
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   loadSearchData();
@@ -115,6 +118,15 @@ function getCuratedRecordsForRole(role) {
   return allData.filter(r => r.role === role && isCuratedRecord(r) && Array.isArray(r.assistant_steps) && r.assistant_steps.length > 0);
 }
 
+function getCategoryOrder(role) {
+  return ROLE_CATEGORY_ORDER[role] || ['常用操作'];
+}
+
+function getRecordCategory(record) {
+  if (record.role === '登記桌人員') return getDeskCategory(record);
+  return getChengbanCategory(record);
+}
+
 function getChengbanCategory(record) {
   const title = record.title || '';
   const words = `${title} ${joinArray(record.keywords)}`;
@@ -127,6 +139,27 @@ function getChengbanCategory(record) {
   return '常用待辦';
 }
 
+
+function getDeskCategory(record) {
+  const title = record.title || '';
+  const words = `${title} ${joinArray(record.keywords)} ${record.section_title || ''}`;
+
+  // 先看標題前綴，避免「簽收」因為含有查詢、紙本來文等關鍵字被分到其他類。
+  if (/^(待簽收|待分文|來文分文|已處理公文：對方未簽收)/.test(title)) return '常用待辦';
+  if (/^代理模式/.test(title)) return '代理模式';
+  if (/^案例流程/.test(title)) return '案例流程';
+  if (/^(登記桌處理|報表列印|已處理公文)/.test(title)) return '查詢報表';
+  if (/^共通性作業/.test(title)) return '個人設定';
+  if (/^常見問題/.test(title)) return '常見問題';
+
+  if (/(常見問題|為甚麼|為什麼|如何設定單位|設定登記桌|系統管理|組織及單位代碼管理)/.test(words)) return '常見問題';
+  if (/(個人化儀表板|個人資料|設定代理作業|被代理查詢|共通性作業)/.test(words)) return '個人設定';
+  if (/(案例流程|電子來文|紙本來文|函覆發文|轉紙本|來文分文完整流程)/.test(words)) return '案例流程';
+  if (/(登記簿|清單|報表|查詢|列印|催辦|逾期|彙總|送文|會辦|未結案|已結案|Excel|PDF)/.test(words)) return '查詢報表';
+  if (/(代理模式|承辦中|待結案|受會案件|待歸檔|轉線上|單位決行|送陳|存查|送發|續辦|送檔|歸檔|註銷|變更承辦人|移交|彙辦|併辦|會畢)/.test(words)) return '代理模式';
+  return '常用待辦';
+}
+
 function updateQuickGuidePanel() {
   const panel = document.getElementById('quickGuidePanel');
   const body = document.getElementById('quickGuideBody');
@@ -135,7 +168,7 @@ function updateQuickGuidePanel() {
 
   if (!panel || !body || !toggle) return;
 
-  if (!dataReady || role !== '承辦人') {
+  if (!dataReady || !role || getCuratedRecordsForRole(role).length === 0) {
     panel.style.display = 'none';
     return;
   }
@@ -152,20 +185,22 @@ function renderQuickGuide() {
   const optionEl = document.getElementById('quickGuideOptions');
   if (!categoryEl || !optionEl) return;
 
-  const records = getCuratedRecordsForRole('承辦人');
+  const role = document.getElementById('roleSelect').value;
+  const order = getCategoryOrder(role);
+  const records = getCuratedRecordsForRole(role);
   const grouped = {};
-  for (const category of CHENGBAN_CATEGORY_ORDER) grouped[category] = [];
+  for (const category of order) grouped[category] = [];
   for (const record of records) {
-    const category = getChengbanCategory(record);
+    const category = getRecordCategory(record);
     if (!grouped[category]) grouped[category] = [];
     grouped[category].push(record);
   }
 
   if (!grouped[currentQuickCategory] || grouped[currentQuickCategory].length === 0) {
-    currentQuickCategory = CHENGBAN_CATEGORY_ORDER.find(c => grouped[c] && grouped[c].length > 0) || '常用待辦';
+    currentQuickCategory = order.find(c => grouped[c] && grouped[c].length > 0) || order[0] || '常用操作';
   }
 
-  categoryEl.innerHTML = CHENGBAN_CATEGORY_ORDER
+  categoryEl.innerHTML = order
     .filter(category => grouped[category] && grouped[category].length > 0)
     .map(category => `
       <button type="button" class="quick-category-btn ${category === currentQuickCategory ? 'active' : ''}" onclick="selectQuickCategory('${escAttr(category)}')">
@@ -182,7 +217,7 @@ function renderQuickOption(record) {
   const keywords = Array.isArray(record.keywords) ? record.keywords.slice(0, 4) : [];
   const firstStep = normalizeSteps(record.assistant_steps)[0] || '點選後直接查看小助手整理步驟。';
   return `
-    <button type="button" class="quick-option-card" onclick="searchFromChoice('${escAttr(record.title || '')}')">
+    <button type="button" class="quick-option-card" onclick="searchFromChoice('${escAttr(record.role || '')}', '${escAttr(record.title || '')}')">
       <span class="quick-option-title">${escHtml(record.title || '')}</span>
       <span class="quick-option-desc">${escHtml(firstStep)}</span>
       <span class="quick-option-tags">
@@ -197,10 +232,10 @@ function selectQuickCategory(category) {
   renderQuickGuide();
 }
 
-function searchFromChoice(query) {
+function searchFromChoice(role, query) {
   const roleSelect = document.getElementById('roleSelect');
   const queryInput = document.getElementById('queryInput');
-  roleSelect.value = '承辦人';
+  if (role) roleSelect.value = role;
   queryInput.value = query;
   hideSuggestions();
   updateRoleStatus();
@@ -278,7 +313,7 @@ function updateSuggestions() {
 function renderSuggestionItem(record, index) {
   const keywords = Array.isArray(record.keywords) ? record.keywords.slice(0, 3) : [];
   return `
-    <button type="button" class="suggestion-item" data-index="${index}" onclick="searchFromChoice('${escAttr(record.title || '')}')">
+    <button type="button" class="suggestion-item" data-index="${index}" onclick="searchFromChoice('${escAttr(record.role || '')}', '${escAttr(record.title || '')}')">
       <span class="suggestion-main">${escHtml(record.title || '')}</span>
       <span class="suggestion-sub">${keywords.map(k => escHtml(k)).join('・')}</span>
     </button>
@@ -389,7 +424,7 @@ function querySpecificity(fullQuery, keywords) {
   const q = (fullQuery || '').trim();
   if (!q) return 'none';
   // 很廣的詞容易命中很多操作，最多顯示 2 筆；其他情況只顯示最符合的 1 筆。
-  const broadTerms = ['發文', '查詢', '申請', '存查', '歸檔', '簽收', '送出', '列印', '設定', '公文', '附件'];
+  const broadTerms = ['發文', '查詢', '申請', '存查', '歸檔', '簽收', '分文', '代理', '代理模式', '送出', '列印', '設定', '公文', '附件', '報表'];
   if (broadTerms.includes(q)) return 'broad';
   if (q.length <= 1) return 'broad';
   return 'specific';
